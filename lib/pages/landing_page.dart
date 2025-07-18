@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:root_app/pages/home_page.dart';
 
 class LandingPage extends StatefulWidget {
-  const LandingPage({super.key});
+  final void Function(Locale) onLocaleChange;
+  const LandingPage({Key? key, required this.onLocaleChange}) : super(key: key);
 
   @override
   State<LandingPage> createState() => _LandingPageState();
@@ -37,6 +41,7 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
 
   @override
   Widget build(BuildContext context) {
+    Locale currentLocale = Localizations.localeOf(context);
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -57,14 +62,130 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
         child: SafeArea(
           child: Stack(
             children: [
-              // Halo lumineux coloré et dégradé radial autour du logo
+              // Sélecteur de langue stylisé en haut à droite
+              Positioned(
+                top: 16,
+                right: 16,
+                child: Builder(
+                  builder: (context) {
+                    Locale currentLocale = Localizations.localeOf(context);
+                    String langLabel(Locale locale) {
+                      switch (locale.languageCode) {
+                        case 'en':
+                          return 'English';
+                        case 'fr':
+                          return 'Français';
+                        case 'ar':
+                          return 'العربية';
+                        default:
+                          return locale.languageCode;
+                      }
+                    }
+                    String langFlag(Locale locale) {
+                      switch (locale.languageCode) {
+                        case 'en':
+                          return '🇬🇧';
+                        case 'fr':
+                          return '🇫🇷';
+                        case 'ar':
+                          return '🇲🇦'; // Maroc pour l'arabe, à adapter si besoin
+                        default:
+                          return '🌐';
+                      }
+                    }
+                    final locales = [
+                      const Locale('en'),
+                      const Locale('fr'),
+                      const Locale('ar'),
+                    ];
+                    return Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(24),
+                        onTap: () async {
+                          final RenderBox button = context.findRenderObject() as RenderBox;
+                          final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+                          final Offset position = button.localToGlobal(Offset.zero, ancestor: overlay);
+                          final selected = await showMenu<Locale>(
+                            context: context,
+                            position: RelativeRect.fromLTRB(
+                              position.dx,
+                              position.dy + button.size.height + 8,
+                              overlay.size.width - position.dx - button.size.width,
+                              0,
+                            ),
+                            items: locales.map((locale) {
+                              return PopupMenuItem<Locale>(
+                                value: locale,
+                                child: Row(
+                                  children: [
+                                    Text(langFlag(locale), style: const TextStyle(fontSize: 20)),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      langLabel(locale),
+                                      style: TextStyle(
+                                        fontWeight: locale == currentLocale ? FontWeight.bold : FontWeight.normal,
+                                        color: locale == currentLocale ? Colors.black : Colors.grey[800],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          );
+                          if (selected != null && selected != currentLocale) {
+                            widget.onLocaleChange(selected);
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.92),
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.10),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                            border: Border.all(
+                              color: Colors.black.withOpacity(0.08),
+                              width: 1.2,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                langFlag(currentLocale),
+                                style: const TextStyle(fontSize: 20),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                langLabel(currentLocale),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.keyboard_arrow_down, size: 18),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              // Logo animé
               Center(
                 child: FadeTransition(
                   opacity: _fadeLogo,
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      // Suppression du dégradé radial doux et du halo lumineux coloré
                       // Cercle du logo avec contour et effet gloss
                       Container(
                         width: 180,
@@ -136,7 +257,10 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
                       onTapUp: (_) => setState(() => _isButtonPressed = false),
                       onTapCancel: () => setState(() => _isButtonPressed = false),
                       onTap: () {
-                        // TODO: Naviguer vers la suite de l'app
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const HomePage()),
+                        );
                       },
                       child: AnimatedScale(
                         scale: _isButtonPressed ? 0.96 : 1.0,
@@ -164,9 +288,9 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
                             ],
                           ),
                           alignment: Alignment.center,
-                          child: const Text(
-                            'Get Started',
-                            style: TextStyle(
+                          child: Text(
+                            AppLocalizations.of(context)!.getStarted,
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
