@@ -1,21 +1,180 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'package:root_app/pages/home_page.dart';
+import 'auth_page.dart';
 
 class LandingPage extends StatefulWidget {
   final void Function(Locale) onLocaleChange;
-  const LandingPage({Key? key, required this.onLocaleChange}) : super(key: key);
+  final void Function() onThemeToggle;
+  final bool isDarkMode;
+  
+  const LandingPage({
+    Key? key, 
+    required this.onLocaleChange,
+    required this.onThemeToggle,
+    required this.isDarkMode,
+  }) : super(key: key);
 
   @override
   State<LandingPage> createState() => _LandingPageState();
 }
 
-class _LandingPageState extends State<LandingPage> with SingleTickerProviderStateMixin {
+class _LandingPageState extends State<LandingPage> {
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(seconds: 4), () {
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AuthPage(
+              onLocaleChange: widget.onLocaleChange,
+              onThemeToggle: widget.onThemeToggle,
+              isDarkMode: widget.isDarkMode,
+            ),
+          ),
+        );
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
+    final isDark = widget.isDarkMode;
+    
+    return Scaffold(
+      body: SafeArea(
+        child: Stack(
+          children: [
+            // Fond avec dégradé radial vintage
+            Container(
+              width: double.infinity,
+              height: double.infinity,
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  center: Alignment.center,
+                  radius: 1.2,
+                  colors: isDark 
+                    ? [
+                        const Color(0xFF2A2A2A),
+                        const Color(0xFF1A1A1A),
+                        const Color(0xFF0A0A0A),
+                      ]
+                    : [
+                        const Color(0xFF2A2A2A),
+                        const Color(0xFF1A1A1A),
+                        const Color(0xFF0A0A0A),
+                      ],
+                  stops: const [0.0, 0.7, 1.0],
+                ),
+              ),
+            ),
+            // Bouton de thème en haut à gauche
+            Positioned(
+              top: 16,
+              left: 16,
+              child: _ThemeToggleButton(
+                isDarkMode: isDark,
+                onToggle: widget.onThemeToggle,
+              ),
+            ),
+            // Logo stylisé au centre
+            Center(
+              child: Container(
+                width: 260,
+                height: 260,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: (isDark ? Colors.white : Colors.white).withOpacity(0.13),
+                      blurRadius: 36,
+                      spreadRadius: 10,
+                    ),
+                  ],
+                  border: Border.all(color: isDark ? Colors.white : Colors.white, width: 4),
+                ),
+                child: Container(
+                  margin: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white : Colors.black,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isDark ? Colors.grey[400]! : Colors.grey[400]!, 
+                      width: 2
+                    ),
+                  ),
+                  child: Center(
+                    child: Image.asset(
+                      'assets/logo.png',
+                      fit: BoxFit.contain,
+                      width: 140,
+                      height: 140,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // Animation de loading en bas
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 56),
+                child: _ThreeDotsLoading(isDarkMode: isDark),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ThemeToggleButton extends StatelessWidget {
+  final bool isDarkMode;
+  final VoidCallback onToggle;
+
+  const _ThemeToggleButton({
+    required this.isDarkMode,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: isDarkMode ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDarkMode ? Colors.white.withOpacity(0.2) : Colors.black.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: IconButton(
+        onPressed: onToggle,
+        icon: Icon(
+          isDarkMode ? Icons.light_mode : Icons.dark_mode,
+          color: isDarkMode ? Colors.white : Colors.black,
+          size: 24,
+        ),
+      ),
+    );
+  }
+}
+
+class _ThreeDotsLoading extends StatefulWidget {
+  final bool isDarkMode;
+  
+  const _ThreeDotsLoading({required this.isDarkMode});
+
+  @override
+  State<_ThreeDotsLoading> createState() => _ThreeDotsLoadingState();
+}
+
+class _ThreeDotsLoadingState extends State<_ThreeDotsLoading> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  late Animation<double> _fadeLogo;
-  late Animation<double> _fadeButton;
-  bool _isButtonPressed = false;
 
   @override
   void initState() {
@@ -23,14 +182,7 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
-    );
-    _fadeLogo = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.6, curve: Curves.easeOut)),
-    );
-    _fadeButton = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _controller, curve: const Interval(0.5, 1.0, curve: Curves.easeOut)),
-    );
-    _controller.forward();
+    )..repeat();
   }
 
   @override
@@ -41,278 +193,30 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
 
   @override
   Widget build(BuildContext context) {
-    Locale currentLocale = Localizations.localeOf(context);
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF181818),
-              Color(0xFF444444),
-              Color(0xFFF8F8F8),
-              Colors.white,
-            ],
-            stops: [0.0, 0.25, 0.85, 1.0],
-          ),
-        ),
-        child: SafeArea(
-          child: Stack(
-            children: [
-              // Sélecteur de langue stylisé en haut à droite
-              Positioned(
-                top: 16,
-                right: 16,
-                child: Builder(
-                  builder: (context) {
-                    Locale currentLocale = Localizations.localeOf(context);
-                    String langLabel(Locale locale) {
-                      switch (locale.languageCode) {
-                        case 'en':
-                          return 'English';
-                        case 'fr':
-                          return 'Français';
-                        case 'ar':
-                          return 'العربية';
-                        default:
-                          return locale.languageCode;
-                      }
-                    }
-                    String langFlag(Locale locale) {
-                      switch (locale.languageCode) {
-                        case 'en':
-                          return '🇬🇧';
-                        case 'fr':
-                          return '🇫🇷';
-                        case 'ar':
-                          return '🇲🇦'; // Maroc pour l'arabe, à adapter si besoin
-                        default:
-                          return '🌐';
-                      }
-                    }
-                    final locales = [
-                      const Locale('en'),
-                      const Locale('fr'),
-                      const Locale('ar'),
-                    ];
-                    return Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(24),
-                        onTap: () async {
-                          final RenderBox button = context.findRenderObject() as RenderBox;
-                          final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
-                          final Offset position = button.localToGlobal(Offset.zero, ancestor: overlay);
-                          final selected = await showMenu<Locale>(
-                            context: context,
-                            position: RelativeRect.fromLTRB(
-                              position.dx,
-                              position.dy + button.size.height + 8,
-                              overlay.size.width - position.dx - button.size.width,
-                              0,
-                            ),
-                            items: locales.map((locale) {
-                              return PopupMenuItem<Locale>(
-                                value: locale,
-                                child: Row(
-                                  children: [
-                                    Text(langFlag(locale), style: const TextStyle(fontSize: 20)),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      langLabel(locale),
-                                      style: TextStyle(
-                                        fontWeight: locale == currentLocale ? FontWeight.bold : FontWeight.normal,
-                                        color: locale == currentLocale ? Colors.black : Colors.grey[800],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                          );
-                          if (selected != null && selected != currentLocale) {
-                            widget.onLocaleChange(selected);
-                          }
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.92),
-                            borderRadius: BorderRadius.circular(24),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.10),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                            border: Border.all(
-                              color: Colors.black.withOpacity(0.08),
-                              width: 1.2,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                langFlag(currentLocale),
-                                style: const TextStyle(fontSize: 20),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                langLabel(currentLocale),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 15,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              const Icon(Icons.keyboard_arrow_down, size: 18),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
+    return SizedBox(
+      height: 32,
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          int activeDot = (_controller.value * 3).floor() % 3;
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(3, (i) {
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                margin: const EdgeInsets.symmetric(horizontal: 8),
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: i == activeDot 
+                    ? (widget.isDarkMode ? Colors.white : Colors.white)
+                    : (widget.isDarkMode ? Colors.white.withOpacity(0.3) : Colors.white.withOpacity(0.3)),
+                  shape: BoxShape.circle,
                 ),
-              ),
-              // Logo animé
-              Center(
-                child: FadeTransition(
-                  opacity: _fadeLogo,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // Cercle du logo avec contour et effet gloss
-                      Container(
-                        width: 180,
-                        height: 180,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.black.withOpacity(0.12),
-                            width: 3,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.10),
-                              blurRadius: 40,
-                              spreadRadius: 4,
-                            ),
-                          ],
-                        ),
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            // Logo
-                            Padding(
-                              padding: const EdgeInsets.all(24),
-                              child: ClipOval(
-                                child: Image.asset(
-                                  'assets/logo.png',
-                                  fit: BoxFit.contain,
-                                ),
-                              ),
-                            ),
-                            // Effet gloss (reflet)
-                            Positioned(
-                              top: 18,
-                              left: 30,
-                              right: 30,
-                              child: Container(
-                                height: 28,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(24),
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: [
-                                      Colors.white.withOpacity(0.45),
-                                      Colors.white.withOpacity(0.05),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              // Bouton animé en bas
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: FadeTransition(
-                  opacity: _fadeButton,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
-                    child: GestureDetector(
-                      onTapDown: (_) => setState(() => _isButtonPressed = true),
-                      onTapUp: (_) => setState(() => _isButtonPressed = false),
-                      onTapCancel: () => setState(() => _isButtonPressed = false),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const HomePage()),
-                        );
-                      },
-                      child: AnimatedScale(
-                        scale: _isButtonPressed ? 0.96 : 1.0,
-                        duration: const Duration(milliseconds: 120),
-                        curve: Curves.easeOut,
-                        child: Container(
-                          width: double.infinity,
-                          height: 58,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [
-                                Color(0xFF222222),
-                                Color(0xFF000000),
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(32),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.18),
-                                blurRadius: 20,
-                                offset: const Offset(0, 8),
-                              ),
-                            ],
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            AppLocalizations.of(context)!.getStarted,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.2,
-                              shadows: [
-                                Shadow(
-                                  color: Colors.black26,
-                                  blurRadius: 4,
-                                  offset: Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+              );
+            }),
+          );
+        },
       ),
     );
   }
